@@ -4,9 +4,25 @@
 # Action    : 微博监控
 # Desc      : 微博监控主模块
 
-import requests
-import json
 import sys
+import json
+import logging
+
+try:
+    import requests
+except ImportError:
+    raise
+
+# set logging
+formatter = logging.Formatter(
+    "%(asctime)s - %(levelname)s - %(message)s",
+    "%Y-%m-%d %H:%M:%S")  # set custom time format
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.INFO)
+stream_handler.setFormatter(formatter)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(stream_handler)
 
 
 class weiboMonitor():
@@ -55,13 +71,13 @@ class weiboMonitor():
                 loginApi, data=loginPostData, headers=self.reqHeaders)
             if r.status_code == 200 and \
                json.loads(r.text)['retcode'] == 20000000:
-                self.echoMsg('Info', 'Login successful! UserId:' +
-                             json.loads(r.text)['data']['uid'])
+                logger.info('Login successful! UserId: {}'.format(
+                    json.loads(r.text)['data']['uid']))
             else:
-                self.echoMsg('Error', 'Logon failure!')
+                logger.error('Logon failed!')
                 sys.exit()
         except Exception as e:
-            self.echoMsg('Error', e)
+            logger.error(e)
             sys.exit()
 
     """
@@ -79,7 +95,7 @@ class weiboMonitor():
                 if i['tab_type'] == 'weibo':
                     conId = i['containerid']
         except Exception as e:
-            self.echoMsg('Error', e)
+            logger.error(e)
             sys.exit()
         # get user weibo index
         self.weiboInfo = 'https://m.weibo.cn/api/container/getIndex?uid=%s&type=uid&value=%s&containerid=%s' % (
@@ -90,10 +106,10 @@ class weiboMonitor():
             for i in r.json()['data']['cards']:
                 if i['card_type'] == 9:
                     self.itemIds.append(i['mblog']['id'])
-            self.echoMsg('Info', 'Got weibos')
-            self.echoMsg('Info', 'Has %d id(s)' % len(self.itemIds))
+            logger.info('Got weibos')
+            logger.info('Has %d id(s)' % len(self.itemIds))
         except Exception as e:
-            self.echoMsg('Error', e)
+            logger.error(e)
             sys.exit()
     """
         @   Class self  :
@@ -107,7 +123,7 @@ class weiboMonitor():
                 if i['card_type'] == 9:
                     if str(i['mblog']['id']) not in self.itemIds:
                         self.itemIds.append(i['mblog']['id'])
-                        self.echoMsg('Info', 'Got a new weibo')
+                        logger.info('Got a new weibo')
                         # return returnDict dict
                         returnDict['created_at'] = i['mblog']['created_at']
                         returnDict['text'] = i['mblog']['text']
@@ -120,18 +136,12 @@ class weiboMonitor():
                             for j in i['mblog']['pics']:
                                 returnDict['picUrls'].append(j['url'])
                         return returnDict
-            self.echoMsg('Info', 'Has %d id(s)' % len(self.itemIds))
+            logger.info('Has %d id(s)' % len(self.itemIds))
         except Exception as e:
-            self.echoMsg('Error', e)
+            logger.error(e)
             sys.exit()
 
     """
         @   String level   : Info/Error
         @   String msg     : The message you want to show
     """
-
-    def echoMsg(self, level, msg):
-        if level == 'Info':
-            print '[Info] %s' % msg
-        elif level == 'Error':
-            print '[Error] %s' % msg
